@@ -1,91 +1,202 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ROMクイズ</title>
-<style>
-body{font-family:sans-serif;text-align:center;background:#f5f5f5}
-img{max-width:90%;margin:10px}
-button{margin:5px;padding:10px 20px}
-input,textarea{width:90%;margin:5px;padding:8px}
-.box{background:#fff;padding:15px;margin:10px;border-radius:10px}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ROM基本軸・移動軸 〇×クイズ</title>
+  <style>
+    body { font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #f9f9f9; color: #333; }
+    .card { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
+    .hidden { display: none; }
+    img { max-width: 100%; height: auto; border-radius: 4px; border: 1px solid #ccc; margin: 10px 0; }
+    button { padding: 10px 20px; font-size: 16px; margin: 5px; cursor: pointer; border: none; border-radius: 4px; background: #007bff; color: #fff; }
+    button:hover { background: #0056b3; }
+    button.btn-ox { width: 100px; font-size: 24px; font-weight: bold; }
+    button.btn-o { background: #28a745; } button.btn-x { background: #dc3545; }
+    input, textarea, select { width: 100%; padding: 8px; margin: 5px 0 15px; box-sizing: border-box; }
+    .nav { margin-bottom: 15px; border-bottom: 2px solid #ccc; padding-bottom: 10px; }
+    .nav button { background: #6c757d; }
+  </style>
 </head>
 <body>
 
-<h2 id="title"></h2>
-<img id="img">
-<p>基本軸と移動軸は正しい？</p>
+  <div class="nav">
+    <button onclick="showScreen('quiz-screen')">クイズを解く</button>
+    <button onclick="showScreen('admin-screen')">問題を編集する</button>
+  </div>
 
-<button onclick="answer(true)">○</button>
-<button onclick="answer(false)">×</button>
+  <!-- クイズ画面 -->
+  <div id="quiz-screen" class="card">
+    <h2 id="q-title">問題</h2>
+    <div id="q-image-container"></div>
+    <p id="q-text" style="font-size: 18px; font-weight: bold;"></p>
+    
+    <div id="quiz-actions">
+      <button class="btn-ox btn-o" onclick="checkAnswer(true)">〇</button>
+      <button class="btn-ox btn-x" onclick="checkAnswer(false)">×</button>
+    </div>
 
-<h3 id="result"></h3>
-<p id="explain"></p>
+    <div id="result-area" class="hidden" style="margin-top: 15px;">
+      <h3 id="result-text"></h3>
+      <p id="explanation-text"></p>
+      <button onclick="nextQuestion()">次の問題へ</button>
+    </div>
+  </div>
 
-<hr>
+  <!-- 問題編集画面（管理機能） -->
+  <div id="admin-screen" class="card hidden">
+    <h2>問題管理</h2>
+    
+    <h3>新規問題追加</h3>
+    <form id="add-form" onsubmit="saveQuestion(event)">
+      <label>関節・運動名（例：肩関節 屈曲）</label>
+      <input type="text" id="input-joint" required>
 
-<div class="box">
-<h3>問題編集</h3>
-<input id="q_title" placeholder="問題文">
-<input id="q_img" placeholder="画像URL">
-<input id="q_basic" placeholder="基本軸">
-<input id="q_moving" placeholder="移動軸">
-<input id="q_answer" placeholder="TRUE or FALSE">
-<textarea id="q_exp" placeholder="解説"></textarea>
-<br>
-<button onclick="add()">追加</button>
-<button onclick="save()">保存</button>
-<button onclick="load()">読込</button>
-</div>
+      <label>問題文（基本軸や移動軸の設定を記述）</label>
+      <textarea id="input-text" rows="2" placeholder="基本軸は肩甲骨外側縁である。" required></textarea>
 
-<script>
-let data=[],i=0;
+      <label>画像URL（空欄可 / 無料画像などのURLまたはbase64）</label>
+      <input type="text" id="input-img" placeholder="https://example.com/image.jpg">
 
-function show(){
- if(data.length==0)return;
- let q=data[i];
- title.textContent=q.title;
- img.src=q.image;
- result.textContent="";
- explain.textContent="";
-}
+      <label>正解</label>
+      <select id="input-answer">
+        <option value="true">〇（正しい）</option>
+        <option value="false">×（誤り）</option>
+      </select>
 
-function answer(v){
- let q=data[i];
- let ok=(v==q.correct);
- result.textContent=ok?"正解":"不正解";
- explain.textContent=q.explanation;
- i++;
- if(i<data.length)setTimeout(show,1000);
-}
+      <label>解説</label>
+      <textarea id="input-exp" rows="2" placeholder="正解は「肩甲骨腋窩縁」です。" required></textarea>
 
-function add(){
- data.push({
-  title:q_title.value,
-  image:q_img.value,
-  basic:q_basic.value,
-  moving:q_moving.value,
-  correct:q_answer.value=="TRUE",
-  explanation:q_exp.value
- });
- alert("追加しました");
-}
+      <button type="submit" style="background:#28a745;">追加する</button>
+    </form>
 
-function save(){
- localStorage.setItem("quiz",JSON.stringify(data));
- alert("保存しました");
-}
+    <hr style="margin: 20px 0;">
+    
+    <h3>登録済み問題（データ管理）</h3>
+    <button onclick="exportData()" style="background: #17a2b8;">JSONとして出力（バックアップ）</button>
+    <button onclick="resetData()" style="background: #dc3545;">初期データに戻す</button>
+    <ul id="question-list" style="margin-top: 15px; padding-left: 20px;"></ul>
+  </div>
 
-function load(){
- data=JSON.parse(localStorage.getItem("quiz")||"[]");
- i=0;
- show();
-}
+  <script>
+    // 初期サンプル問題
+    const defaultQuestions = [
+      {
+        joint: "肩関節 屈曲",
+        text: "基本軸は「肩甲骨腋窩縁」、移動軸は「骨幹（上腕骨）」である。",
+        img: "",
+        answer: true,
+        exp: "正しいです。屈曲の基本軸は肩甲骨腋窩縁、移動軸は上腕骨です。"
+      },
+      {
+        joint: "股関節 外転",
+        text: "基本軸は「両側の前上腸骨棘を結ぶ線」、移動軸は「大腿骨幹（大腿骨頭と膝蓋骨中心を結ぶ線）」である。",
+        img: "",
+        answer: true,
+        exp: "正しいです。基本軸は両側のASISを結ぶ線です。"
+      }
+    ];
 
-load();
-</script>
+    let questions = JSON.parse(localStorage.getItem('rom_quiz_questions')) || defaultQuestions;
+    let currentIndex = 0;
 
+    function showScreen(screenId) {
+      document.getElementById('quiz-screen').classList.add('hidden');
+      document.getElementById('admin-screen').classList.add('hidden');
+      document.getElementById(screenId).classList.remove('hidden');
+      if (screenId === 'admin-screen') renderAdminList();
+    }
+
+    function loadQuestion() {
+      if (questions.length === 0) {
+        document.getElementById('q-title').innerText = "問題がありません";
+        document.getElementById('q-text').innerText = "管理画面から問題を追加してください。";
+        return;
+      }
+      const q = questions[currentIndex];
+      document.getElementById('q-title').innerText = `【${q.joint}】（${currentIndex + 1}/${questions.length}）`;
+      document.getElementById('q-text').innerText = q.text;
+      
+      const imgContainer = document.getElementById('q-image-container');
+      imgContainer.innerHTML = q.img ? `<img src="${q.img}" alt="問題画像">` : '';
+      
+      document.getElementById('result-area').classList.add('hidden');
+      document.getElementById('quiz-actions').classList.remove('hidden');
+    }
+
+    function checkAnswer(userAnswer) {
+      const q = questions[currentIndex];
+      const isCorrect = userAnswer === q.answer;
+      
+      document.getElementById('result-text').innerText = isCorrect ? "正解！ ⭕" : "不正解... ❌";
+      document.getElementById('result-text').style.color = isCorrect ? "#28a745" : "#dc3545";
+      document.getElementById('explanation-text').innerText = q.exp;
+      
+      document.getElementById('quiz-actions').classList.add('hidden');
+      document.getElementById('result-area').classList.remove('hidden');
+    }
+
+    function nextQuestion() {
+      currentIndex = (currentIndex + 1) % questions.length;
+      loadQuestion();
+    }
+
+    function saveQuestion(e) {
+      e.preventDefault();
+      const newQ = {
+        joint: document.getElementById('input-joint').value,
+        text: document.getElementById('input-text').value,
+        img: document.getElementById('input-img').value,
+        answer: document.getElementById('input-answer').value === "true",
+        exp: document.getElementById('input-exp').value
+      };
+      questions.push(newQ);
+      localStorage.setItem('rom_quiz_questions', JSON.stringify(questions));
+      document.getElementById('add-form').reset();
+      alert("問題を追加しました！");
+      renderAdminList();
+    }
+
+    function deleteQuestion(index) {
+      if (confirm("この問題を削除しますか？")) {
+        questions.splice(index, 1);
+        localStorage.setItem('rom_quiz_questions', JSON.stringify(questions));
+        renderAdminList();
+        loadQuestion();
+      }
+    }
+
+    function renderAdminList() {
+      const list = document.getElementById('question-list');
+      list.innerHTML = '';
+      questions.forEach((q, i) => {
+        const li = document.createElement('li');
+        li.style.marginBottom = "8px";
+        li.innerHTML = `<strong>${q.joint}</strong>: ${q.text} 
+          <button onclick="deleteQuestion(${i})" style="background:#dc3545; padding:2px 8px; font-size:12px;">削除</button>`;
+        list.appendChild(li);
+      });
+    }
+
+    function exportData() {
+      const blob = new Blob([JSON.stringify(questions, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'rom_questions.json';
+      a.click();
+    }
+
+    function resetData() {
+      if (confirm("初期問題に戻しますか？追加した問題は消去されます。")) {
+        localStorage.removeItem('rom_quiz_questions');
+        questions = [...defaultQuestions];
+        renderAdminList();
+        loadQuestion();
+      }
+    }
+
+    // 初回読み込み
+    loadQuestion();
+  </script>
 </body>
 </html>
