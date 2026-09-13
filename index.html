@@ -58,7 +58,7 @@
     <h2>問題管理</h2>
     
     <h3>新規問題追加</h3>
-    <form id="add-form" onsubmit="saveQuestion(event)">
+    <form id="add-form">
       <label>部位</label>
       <select id="input-category">
         <option value="頭頚部">頭頚部</option>
@@ -75,7 +75,7 @@
       </select>
 
       <label>関節・運動名（例：肩関節 屈曲）</label>
-      <input type="text" id="input-joint" required>
+      <input type="text" id="input-joint" placeholder="肩関節 屈曲" required>
 
       <label>問題文</label>
       <textarea id="input-text" rows="2" placeholder="基本軸は肩甲骨外側縁である。" required></textarea>
@@ -92,7 +92,7 @@
       <label>解説</label>
       <textarea id="input-exp" rows="2" placeholder="正解は「肩甲骨腋窩縁」です。" required></textarea>
 
-      <button type="submit" style="background:#28a745;">追加する</button>
+      <button type="button" onclick="handleAddQuestion()" style="background:#28a745;">追加する</button>
     </form>
 
     <hr style="margin: 20px 0;">
@@ -104,7 +104,6 @@
   </div>
 
   <script>
-    // 部位とカラーの設定（黄色系のtextColorを#fffに変更）
     const CATEGORIES = [
       { name: "頭頚部", color: "#007bff", textColor: "#fff" },
       { name: "体幹", color: "#007bff", textColor: "#fff" },
@@ -169,7 +168,7 @@
 
     function loadQuestion() {
       const q = activePlaylist[currentIndex];
-      document.getElementById('q-title').innerText = `【${q.joint}】（${currentIndex + 1}/${activePlaylist.length}）`;
+      document.getElementById('q-title').innerText = `【${q.joint || q.category}】（${currentIndex + 1}/${activePlaylist.length}）`;
       document.getElementById('q-text').innerText = q.text;
       
       const imgContainer = document.getElementById('q-image-container');
@@ -201,16 +200,25 @@
       }
     }
 
-    function saveQuestion(e) {
-      e.preventDefault();
+    function handleAddQuestion() {
+      const jointVal = document.getElementById('input-joint').value.trim();
+      const textVal = document.getElementById('input-text').value.trim();
+      const expVal = document.getElementById('input-exp').value.trim();
+
+      if (!jointVal || !textVal || !expVal) {
+        alert("「関節・運動名」「問題文」「解説」を入力してください。");
+        return;
+      }
+
       const newQ = {
         category: document.getElementById('input-category').value,
-        joint: document.getElementById('input-joint').value,
-        text: document.getElementById('input-text').value,
-        img: document.getElementById('input-img').value,
+        joint: jointVal,
+        text: textVal,
+        img: document.getElementById('input-img').value.trim(),
         answer: document.getElementById('input-answer').value === "true",
-        exp: document.getElementById('input-exp').value
+        exp: expVal
       };
+
       questions.push(newQ);
       localStorage.setItem('rom_quiz_questions', JSON.stringify(questions));
       document.getElementById('add-form').reset();
@@ -232,7 +240,8 @@
       questions.forEach((q, i) => {
         const li = document.createElement('li');
         li.style.marginBottom = "8px";
-        li.innerHTML = `[${q.category || "未設定"}] <strong>${q.joint}</strong>: ${q.text} 
+        const titleText = q.joint || q.text;
+        li.innerHTML = `[${q.category || "未設定"}] <strong>${titleText}</strong> 
           <button onclick="deleteQuestion(${i})" style="background:#dc3545; padding:2px 8px; font-size:12px;">削除</button>`;
         list.appendChild(li);
       });
@@ -255,7 +264,6 @@
       }
     }
 
-    // 初回起動
     showScreen('mode-screen');
   </script>
 </body>
