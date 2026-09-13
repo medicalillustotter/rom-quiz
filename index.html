@@ -11,12 +11,14 @@
     img { max-width: 100%; height: auto; border-radius: 4px; border: 1px solid #ccc; margin: 10px 0; }
     button { padding: 10px 20px; font-size: 16px; margin: 5px; cursor: pointer; border: none; border-radius: 4px; background: #007bff; color: #fff; }
     button:hover { opacity: 0.9; }
+    button:disabled { background: #ccc; cursor: not-allowed; }
     button.btn-ox { width: 100px; font-size: 24px; font-weight: bold; }
     button.btn-o { background: #28a745; } button.btn-x { background: #dc3545; }
     input, textarea, select { width: 100%; padding: 8px; margin: 5px 0 15px; box-sizing: border-box; }
     .nav { margin-bottom: 15px; border-bottom: 2px solid #ccc; padding-bottom: 10px; }
     .nav button { background: #6c757d; }
     .mode-btn { width: 100%; margin: 6px 0; padding: 12px; font-size: 16px; text-align: left; box-sizing: border-box; }
+    #loading { font-size: 18px; font-weight: bold; color: #007bff; text-align: center; padding: 20px; }
   </style>
 </head>
 <body>
@@ -26,8 +28,10 @@
     <button onclick="showScreen('admin-screen')">問題を編集する</button>
   </div>
 
+  <div id="loading">問題データを読み込み中...</div>
+
   <!-- モード選択画面 -->
-  <div id="mode-screen" class="card">
+  <div id="mode-screen" class="card hidden">
     <h2>演習モードを選択</h2>
     <button class="mode-btn" style="background:#dc3545;" onclick="startQuiz('all', true)">ランダム全問演習</button>
     <hr style="margin: 15px 0;">
@@ -53,11 +57,10 @@
     </div>
   </div>
 
-  <!-- 問題編集画面（管理機能） -->
+  <!-- 問題編集画面 -->
   <div id="admin-screen" class="card hidden">
     <h2>問題管理</h2>
-    
-    <h3>新規問題追加</h3>
+    <h3>新規問題追加（スプレッドシートに即時保存）</h3>
     <form id="add-form">
       <label>部位</label>
       <select id="input-category">
@@ -80,8 +83,8 @@
       <label>問題文</label>
       <textarea id="input-text" rows="2" placeholder="基本軸は肩甲骨外側縁である。"></textarea>
 
-      <label>画像ファイル名（例: shoulder.png / 空欄可）</label>
-      <input type="text" id="input-img" placeholder="shoulder.png">
+      <label>画像URL（Googleドライブの共有リンクまたは画像直URL / 空欄可）</label>
+      <input type="text" id="input-img" placeholder="https://...">
 
       <label>正解</label>
       <select id="input-answer">
@@ -92,42 +95,37 @@
       <label>解説</label>
       <textarea id="input-exp" rows="2" placeholder="正解は「肩甲骨腋窩縁」です。"></textarea>
 
-      <button type="button" onclick="handleAddQuestion()" style="background:#28a745;">追加する</button>
+      <button type="button" id="submit-btn" onclick="handleAddQuestion()" style="background:#28a745;">追加する</button>
     </form>
-
-    <hr style="margin: 20px 0;">
-    
-    <h3>登録済み問題</h3>
-    <button onclick="exportData()" style="background: #17a2b8;">JSONとして出力</button>
-    <button onclick="resetData()" style="background: #dc3545;">初期データに戻す</button>
-    <ul id="question-list" style="margin-top: 15px; padding-left: 20px;"></ul>
   </div>
 
   <script>
+    // ★ここにStep 1で取得したGoogle Apps ScriptのURLを貼り付けます
+    const GAS_URL = "https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec";
+
     const CATEGORIES = [
-      { name: "頭頚部", color: "#007bff", textColor: "#fff" },
-      { name: "体幹", color: "#007bff", textColor: "#fff" },
-      { name: "肩甲帯", color: "#ffc107", textColor: "#fff" },
-      { name: "肩関節", color: "#ffc107", textColor: "#fff" },
-      { name: "肘関節", color: "#ffc107", textColor: "#fff" },
-      { name: "手関節", color: "#ffc107", textColor: "#fff" },
-      { name: "手指", color: "#ffc107", textColor: "#fff" },
-      { name: "股関節", color: "#28a745", textColor: "#fff" },
-      { name: "膝関節", color: "#28a745", textColor: "#fff" },
-      { name: "足関節", color: "#28a745", textColor: "#fff" },
-      { name: "足部・足趾", color: "#28a745", textColor: "#fff" }
+      { name: "頭頚部", color: "#007bff" }, { name: "体幹", color: "#007bff" },
+      { name: "肩甲帯", color: "#ffc107" }, { name: "肩関節", color: "#ffc107" },
+      { name: "肘関節", color: "#ffc107" }, { name: "手関節", color: "#ffc107" },
+      { name: "手指", color: "#ffc107" }, { name: "股関節", color: "#28a745" },
+      { name: "膝関節", color: "#28a745" }, { name: "足関節", color: "#28a745" },
+      { name: "足部・足趾", color: "#28a745" }
     ];
 
-    const defaultQuestions = [
-      { category: "肩関節", joint: "肩関節 屈曲", text: "基本軸は「肩甲骨腋窩縁」、移動軸は「骨幹（上腕骨）」である。", img: "", answer: true, exp: "正しいです。" },
-      { category: "股関節", joint: "股関節 外転", text: "基本軸は「両側の前上腸骨棘を結ぶ線」、移動軸は「大腿骨幹」である。", img: "", answer: true, exp: "正しいです。" },
-      { category: "体幹", joint: "胸腰椎 屈曲", text: "基本軸は「仙骨面」、移動軸は「第7頸椎棘突起と第1仙椎棘突起を結ぶ線」である。", img: "", answer: true, exp: "正しいです。" },
-      { category: "股関節", joint: "股関節伸展", text: "正しい？", img: "画像1 - コピー.png", answer: false, exp: "大腿直筋の影響を取り除くためには「膝関節伸展位」で測定します。" }
-    ];
-
-    let questions = JSON.parse(localStorage.getItem('rom_quiz_questions')) || defaultQuestions;
+    let questions = [];
     let activePlaylist = [];
     let currentIndex = 0;
+
+    async function fetchQuestions() {
+      try {
+        const res = await fetch(GAS_URL);
+        questions = await res.json();
+        document.getElementById('loading').classList.add('hidden');
+        showScreen('mode-screen');
+      } catch (err) {
+        alert("データの読み込みに失敗しました。URLを確認してください。");
+      }
+    }
 
     function showScreen(screenId) {
       document.getElementById('mode-screen').classList.add('hidden');
@@ -136,31 +134,24 @@
       document.getElementById(screenId).classList.remove('hidden');
       
       if (screenId === 'mode-screen') renderCategoryButtons();
-      if (screenId === 'admin-screen') renderAdminList();
     }
 
     function renderCategoryButtons() {
       const container = document.getElementById('category-buttons');
       container.innerHTML = CATEGORIES.map(cat => 
-        `<button class="mode-btn" style="background:${cat.color}; color:${cat.textColor};" onclick="startQuiz('${cat.name}', false)">${cat.name} 演習</button>`
+        `<button class="mode-btn" style="background:${cat.color}; color:#fff;" onclick="startQuiz('${cat.name}', false)">${cat.name} 演習</button>`
       ).join('');
     }
 
     function startQuiz(category, isRandom) {
-      if (category === 'all') {
-        activePlaylist = [...questions];
-      } else {
-        activePlaylist = questions.filter(q => q.category === category);
-      }
+      activePlaylist = category === 'all' ? [...questions] : questions.filter(q => q.category === category);
 
       if (activePlaylist.length === 0) {
-        alert("該当する問題がまだ登録されていません。");
+        alert("該当する問題がありません。");
         return;
       }
 
-      if (isRandom) {
-        activePlaylist.sort(() => Math.random() - 0.5);
-      }
+      if (isRandom) activePlaylist.sort(() => Math.random() - 0.5);
 
       currentIndex = 0;
       showScreen('quiz-screen');
@@ -173,10 +164,19 @@
       document.getElementById('q-text').innerText = q.text;
       
       const imgContainer = document.getElementById('q-image-container');
-      imgContainer.innerHTML = q.img ? `<img src="${q.img}" alt="問題画像">` : '';
+      imgContainer.innerHTML = q.img ? `<img src="${formatImageUrl(q.img)}" alt="問題画像">` : '';
       
       document.getElementById('result-area').classList.add('hidden');
       document.getElementById('quiz-actions').classList.remove('hidden');
+    }
+
+    // Googleドライブの共有リンクを画像表示用URLに変換するヘルパー
+    function formatImageUrl(url) {
+      if (url.includes('drive.google.com') && url.includes('/d/')) {
+        const id = url.split('/d/')[1].split('/')[0];
+        return `https://drive.google.com/uc?export=view&id=${id}`;
+      }
+      return url;
     }
 
     function checkAnswer(userAnswer) {
@@ -196,20 +196,24 @@
       if (currentIndex < activePlaylist.length) {
         loadQuestion();
       } else {
-        alert("全問題が終了しました！モード選択に戻ります。");
+        alert("全問題が終了しました！");
         showScreen('mode-screen');
       }
     }
 
-    function handleAddQuestion() {
+    async function handleAddQuestion() {
+      const btn = document.getElementById('submit-btn');
       const jointVal = document.getElementById('input-joint').value.trim();
       const textVal = document.getElementById('input-text').value.trim();
       const expVal = document.getElementById('input-exp').value.trim();
 
       if (!jointVal || !textVal || !expVal) {
-        alert("「関節・運動名」「問題文」「解説」を入力してください。");
+        alert("必須項目を入力してください。");
         return;
       }
+
+      btn.disabled = true;
+      btn.innerText = "送信中...";
 
       const newQ = {
         category: document.getElementById('input-category').value,
@@ -220,52 +224,24 @@
         exp: expVal
       };
 
-      questions.push(newQ);
-      localStorage.setItem('rom_quiz_questions', JSON.stringify(questions));
-      document.getElementById('add-form').reset();
-      alert("問題を追加しました！");
-      renderAdminList();
-    }
-
-    function deleteQuestion(index) {
-      if (confirm("この問題を削除しますか？")) {
-        questions.splice(index, 1);
-        localStorage.setItem('rom_quiz_questions', JSON.stringify(questions));
-        renderAdminList();
+      try {
+        await fetch(GAS_URL, {
+          method: 'POST',
+          body: JSON.stringify(newQ)
+        });
+        alert("スプレッドシートに問題を追加しました！");
+        document.getElementById('add-form').reset();
+        await fetchQuestions(); // 最新データを再取得
+      } catch (err) {
+        alert("追加に失敗しました。");
+      } finally {
+        btn.disabled = false;
+        btn.innerText = "追加する";
       }
     }
 
-    function renderAdminList() {
-      const list = document.getElementById('question-list');
-      list.innerHTML = '';
-      questions.forEach((q, i) => {
-        const li = document.createElement('li');
-        li.style.marginBottom = "8px";
-        const titleText = q.joint || q.text;
-        li.innerHTML = `[${q.category || "未設定"}] <strong>${titleText}</strong> 
-          <button onclick="deleteQuestion(${i})" style="background:#dc3545; padding:2px 8px; font-size:12px;">削除</button>`;
-        list.appendChild(li);
-      });
-    }
-
-    function exportData() {
-      const blob = new Blob([JSON.stringify(questions, null, 2)], { type: 'application/json' });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = 'rom_questions.json';
-      a.click();
-    }
-
-    function resetData() {
-      if (confirm("初期問題に戻しますか？")) {
-        localStorage.removeItem('rom_quiz_questions');
-        questions = [...defaultQuestions];
-        renderAdminList();
-        showScreen('mode-screen');
-      }
-    }
-
-    showScreen('mode-screen');
+    // 初回読み込み
+    fetchQuestions();
   </script>
 </body>
 </html>
