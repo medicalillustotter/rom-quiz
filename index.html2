@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ROM測定クイズ</title>
+<style>
+body{font-family:sans-serif;text-align:center;background:#f5f5f5}
+img{max-width:90%;margin:10px}
+button{font-size:20px;margin:10px;padding:10px 20px}
+</style>
+</head>
+<body>
+
+<h2 id="title"></h2>
+<img id="img">
+<p>基本軸と移動軸は正しい？</p>
+
+<button onclick="answer(true)">○</button>
+<button onclick="answer(false)">×</button>
+
+<h3 id="result"></h3>
+<p id="explain"></p>
+
+<script>
+
+// https://docs.google.com/spreadsheets/d/1sGyHVSM2TmxitfmiOqbTesndBq-Xxtli5ZlBXCBBidI/edit?gid=0#gid=0
+const url = "https://docs.google.com/spreadsheets/d/1sGyHVSM2TmxitfmiOqbTesndBq-Xxtli5ZlBXCBBidI/edit?gid=0#gid=0";
+
+let data=[], i=0;
+
+fetch(url)
+.then(res=>res.text())
+.then(text=>{
+  const rows = text.split("\n").slice(1);
+  data = rows.map(r=>{
+    const c = r.split(",");
+    return {
+      title:c[0],
+      image:c[1],
+      basic:c[2],
+      moving:c[3],
+      correct:c[4]=="TRUE",
+      explanation:c[5]
+    }
+  });
+  show();
+});
+
+function show(){
+  const q = data[i];
+  document.getElementById("title").textContent = q.title;
+  document.getElementById("img").src = q.image;
+  document.getElementById("result").textContent = "";
+  document.getElementById("explain").textContent = "";
+}
+
+function answer(v){
+  const q = data[i];
+  const ok = v===q.correct;
+
+  document.getElementById("result").textContent = ok?"正解":"不正解";
+  document.getElementById("explain").textContent =
+    "基本軸："+q.basic+" / 移動軸："+q.moving+" / "+q.explanation;
+
+  i++;
+  if(i<data.length){
+    setTimeout(show,1000);
+  }
+}
+
+</script>
+
+</body>
+</html>
