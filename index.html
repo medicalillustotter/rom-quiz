@@ -119,10 +119,8 @@
     ];
 
     const defaultQuestions = [
-      { category: "肩関節", joint: "肩関節 屈曲", text: "基本軸は「肩甲骨腋窩縁」、移動軸は「骨幹（上腕骨）」である。", img: "", answer: true, exp: "正しいです。" },
-      { category: "股関節", joint: "股関節 外転", text: "基本軸は「両側の前上腸骨棘を結ぶ線」、移動軸は「大腿骨幹」である。", img: "", answer: true, exp: "正しいです。" },
-      { category: "体幹", joint: "胸腰椎 屈曲", text: "基本軸は「仙骨面」、移動軸は「第7頸椎棘突起と第1仙椎棘突起を結ぶ線」である。", img: "", answer: true, exp: "正しいです。" }
-    ];
+    { category: "股関節", joint: "股関節伸展", text: "正しい？", img: "
+画像1 - コピー.png", answer: false, exp: "大腿直筋の影響を取り除くためには「膝関節伸展位」で測定します。" },
 
     let questions = JSON.parse(localStorage.getItem('rom_quiz_questions')) || defaultQuestions;
     let activePlaylist = [];
