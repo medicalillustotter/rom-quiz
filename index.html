@@ -100,8 +100,7 @@
   </div>
 
   <script>
-    // ★ここにStep 1で取得したGoogle Apps ScriptのURLを貼り付けます
-    const GAS_URL = "https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec";
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbzJxhYz-D5-yY0KlFgQI7EcFdddThz0dSgix0u26t_NrAZKA5Nz8qcq4T9ImMHW7o0W/exec";
 
     const CATEGORIES = [
       { name: "頭頚部", color: "#007bff" }, { name: "体幹", color: "#007bff" },
@@ -170,7 +169,6 @@
       document.getElementById('quiz-actions').classList.remove('hidden');
     }
 
-    // Googleドライブの共有リンクを画像表示用URLに変換するヘルパー
     function formatImageUrl(url) {
       if (url.includes('drive.google.com') && url.includes('/d/')) {
         const id = url.split('/d/')[1].split('/')[0];
@@ -231,7 +229,7 @@
         });
         alert("スプレッドシートに問題を追加しました！");
         document.getElementById('add-form').reset();
-        await fetchQuestions(); // 最新データを再取得
+        await fetchQuestions();
       } catch (err) {
         alert("追加に失敗しました。");
       } finally {
@@ -240,7 +238,6 @@
       }
     }
 
-    // 初回読み込み
     fetchQuestions();
   </script>
 </body>
