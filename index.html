@@ -183,7 +183,8 @@
       const q = activePlaylist[currentIndex];
       const isCorrect = userAnswer === q.answer;
       
-      document.getElementById('result-text').innerText = isCorrect ? "正解！ ⭕" : "不正解... ❌";
+      // ⭕ ❌ を除去し、「正解！」「不正解…」のみ表示
+      document.getElementById('result-text').innerText = isCorrect ? "正解！" : "不正解…";
       document.getElementById('result-text').style.color = isCorrect ? "#28a745" : "#dc3545";
       document.getElementById('explanation-text').innerText = q.exp;
       
