@@ -3,11 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ROM測定クイズ</title>
+<title>ROMクイズ</title>
 <style>
 body{font-family:sans-serif;text-align:center;background:#f5f5f5}
 img{max-width:90%;margin:10px}
-button{font-size:20px;margin:10px;padding:10px 20px}
+button{margin:5px;padding:10px 20px}
+input,textarea{width:90%;margin:5px;padding:8px}
+.box{background:#fff;padding:15px;margin:10px;border-radius:10px}
 </style>
 </head>
 <body>
@@ -22,53 +24,67 @@ button{font-size:20px;margin:10px;padding:10px 20px}
 <h3 id="result"></h3>
 <p id="explain"></p>
 
+<hr>
+
+<div class="box">
+<h3>問題編集</h3>
+<input id="q_title" placeholder="問題文">
+<input id="q_img" placeholder="画像URL">
+<input id="q_basic" placeholder="基本軸">
+<input id="q_moving" placeholder="移動軸">
+<input id="q_answer" placeholder="TRUE or FALSE">
+<textarea id="q_exp" placeholder="解説"></textarea>
+<br>
+<button onclick="add()">追加</button>
+<button onclick="save()">保存</button>
+<button onclick="load()">読込</button>
+</div>
+
 <script>
-
-// https://docs.google.com/spreadsheets/d/1sGyHVSM2TmxitfmiOqbTesndBq-Xxtli5ZlBXCBBidI/edit?gid=0#gid=0
-const url = "https://docs.google.com/spreadsheets/d/1sGyHVSM2TmxitfmiOqbTesndBq-Xxtli5ZlBXCBBidI/edit?gid=0#gid=0";
-
-let data=[], i=0;
-
-fetch(url)
-.then(res=>res.text())
-.then(text=>{
-  const rows = text.split("\n").slice(1);
-  data = rows.map(r=>{
-    const c = r.split(",");
-    return {
-      title:c[0],
-      image:c[1],
-      basic:c[2],
-      moving:c[3],
-      correct:c[4]=="TRUE",
-      explanation:c[5]
-    }
-  });
-  show();
-});
+let data=[],i=0;
 
 function show(){
-  const q = data[i];
-  document.getElementById("title").textContent = q.title;
-  document.getElementById("img").src = q.image;
-  document.getElementById("result").textContent = "";
-  document.getElementById("explain").textContent = "";
+ if(data.length==0)return;
+ let q=data[i];
+ title.textContent=q.title;
+ img.src=q.image;
+ result.textContent="";
+ explain.textContent="";
 }
 
 function answer(v){
-  const q = data[i];
-  const ok = v===q.correct;
-
-  document.getElementById("result").textContent = ok?"正解":"不正解";
-  document.getElementById("explain").textContent =
-    "基本軸："+q.basic+" / 移動軸："+q.moving+" / "+q.explanation;
-
-  i++;
-  if(i<data.length){
-    setTimeout(show,1000);
-  }
+ let q=data[i];
+ let ok=(v==q.correct);
+ result.textContent=ok?"正解":"不正解";
+ explain.textContent=q.explanation;
+ i++;
+ if(i<data.length)setTimeout(show,1000);
 }
 
+function add(){
+ data.push({
+  title:q_title.value,
+  image:q_img.value,
+  basic:q_basic.value,
+  moving:q_moving.value,
+  correct:q_answer.value=="TRUE",
+  explanation:q_exp.value
+ });
+ alert("追加しました");
+}
+
+function save(){
+ localStorage.setItem("quiz",JSON.stringify(data));
+ alert("保存しました");
+}
+
+function load(){
+ data=JSON.parse(localStorage.getItem("quiz")||"[]");
+ i=0;
+ show();
+}
+
+load();
 </script>
 
 </body>
