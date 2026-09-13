@@ -10,7 +10,7 @@
     .hidden { display: none; }
     img { max-width: 100%; height: auto; border-radius: 4px; border: 1px solid #ccc; margin: 10px 0; }
     button { padding: 10px 20px; font-size: 16px; margin: 5px; cursor: pointer; border: none; border-radius: 4px; background: #007bff; color: #fff; }
-    button:hover { background: #0056b3; }
+    button:hover { opacity: 0.9; }
     button.btn-ox { width: 100px; font-size: 24px; font-weight: bold; }
     button.btn-o { background: #28a745; } button.btn-x { background: #dc3545; }
     input, textarea, select { width: 100%; padding: 8px; margin: 5px 0 15px; box-sizing: border-box; }
@@ -104,10 +104,19 @@
   </div>
 
   <script>
-    // 定義された部位の一覧
+    // 部位とカラーの設定
     const CATEGORIES = [
-      "頭頚部", "体幹", "肩甲帯", "肩関節", "肘関節", 
-      "手関節", "手指", "股関節", "膝関節", "足関節", "足部・足趾"
+      { name: "頭頚部", color: "#007bff", textColor: "#fff" },
+      { name: "体幹", color: "#007bff", textColor: "#fff" },
+      { name: "肩甲帯", color: "#ffc107", textColor: "#000" },
+      { name: "肩関節", color: "#ffc107", textColor: "#000" },
+      { name: "肘関節", color: "#ffc107", textColor: "#000" },
+      { name: "手関節", color: "#ffc107", textColor: "#000" },
+      { name: "手指", color: "#ffc107", textColor: "#000" },
+      { name: "股関節", color: "#28a745", textColor: "#fff" },
+      { name: "膝関節", color: "#28a745", textColor: "#fff" },
+      { name: "足関節", color: "#28a745", textColor: "#fff" },
+      { name: "足部・足趾", color: "#28a745", textColor: "#fff" }
     ];
 
     const defaultQuestions = [
@@ -133,7 +142,7 @@
     function renderCategoryButtons() {
       const container = document.getElementById('category-buttons');
       container.innerHTML = CATEGORIES.map(cat => 
-        `<button class="mode-btn" style="background:#007bff;" onclick="startQuiz('${cat}', false)">${cat} 演習</button>`
+        `<button class="mode-btn" style="background:${cat.color}; color:${cat.textColor};" onclick="startQuiz('${cat.name}', false)">${cat.name} 演習</button>`
       ).join('');
     }
 
