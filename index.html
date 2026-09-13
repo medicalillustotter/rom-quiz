@@ -104,15 +104,15 @@
   </div>
 
   <script>
-    // 部位とカラーの設定
+    // 部位とカラーの設定（黄色系のtextColorを#fffに変更）
     const CATEGORIES = [
       { name: "頭頚部", color: "#007bff", textColor: "#fff" },
       { name: "体幹", color: "#007bff", textColor: "#fff" },
-      { name: "肩甲帯", color: "#ffc107", textColor: "#000" },
-      { name: "肩関節", color: "#ffc107", textColor: "#000" },
-      { name: "肘関節", color: "#ffc107", textColor: "#000" },
-      { name: "手関節", color: "#ffc107", textColor: "#000" },
-      { name: "手指", color: "#ffc107", textColor: "#000" },
+      { name: "肩甲帯", color: "#ffc107", textColor: "#fff" },
+      { name: "肩関節", color: "#ffc107", textColor: "#fff" },
+      { name: "肘関節", color: "#ffc107", textColor: "#fff" },
+      { name: "手関節", color: "#ffc107", textColor: "#fff" },
+      { name: "手指", color: "#ffc107", textColor: "#fff" },
       { name: "股関節", color: "#28a745", textColor: "#fff" },
       { name: "膝関節", color: "#28a745", textColor: "#fff" },
       { name: "足関節", color: "#28a745", textColor: "#fff" },
@@ -183,7 +183,6 @@
       const q = activePlaylist[currentIndex];
       const isCorrect = userAnswer === q.answer;
       
-      // ⭕ ❌ を除去し、「正解！」「不正解…」のみ表示
       document.getElementById('result-text').innerText = isCorrect ? "正解！" : "不正解…";
       document.getElementById('result-text').style.color = isCorrect ? "#28a745" : "#dc3545";
       document.getElementById('explanation-text').innerText = q.exp;
