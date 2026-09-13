@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ROM測定 ○×クイズ</title>
+<style>
+body{margin:0;font-family:Arial,"Noto Sans JP",sans-serif;background:#f6f7f9;color:#222}
+header{background:#fff;border-bottom:1px solid #ddd;padding:18px}h1{font-size:22px;margin:0}
+main{max-width:850px;margin:22px auto;padding:0 14px}.card{background:#fff;border:1px solid #ddd;border-radius:14px;padding:20px}
+.top,.nav{display:flex;justify-content:space-between;gap:10px}.muted{color:#667085;font-size:13px}
+#question{font-size:19px;font-weight:bold;margin:20px 0}
+.image{min-height:250px;background:#fafafa;border:1px solid #eee;border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:18px}
+.image img{max-width:100%;max-height:520px;object-fit:contain}.placeholder{color:#999}
+.answers{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+button{font:inherit;padding:13px;border:1px solid #ccc;background:#fff;border-radius:9px;cursor:pointer}
+button:disabled{opacity:.45;cursor:default}.correct{background:#eaf8ef!important;border-color:#20a464!important}.wrong{background:#fff0ef!important;border-color:#e34b45!important}
+#result{display:none;margin-top:14px;padding:14px;border-radius:9px;background:#f7f8fa;line-height:1.7}.nav{margin-top:16px}
+@media(max-width:600px){.answers{grid-template-columns:1fr}.card{padding:14px}}
+</style></head>
+<body>
+<header><h1>ROM測定 ○×クイズ</h1></header>
+<main><div class="card">
+<div class="top"><b id="counter">読み込み中…</b><span class="muted" id="score"></span></div>
+<div id="error"></div><div id="question"></div>
+<div class="image" id="image"><span class="placeholder">問題を読み込んでいます…</span></div>
+<div class="answers"><button id="yes" onclick="answer(true)">○ 正しい</button><button id="no" onclick="answer(false)">× 間違い</button></div>
+<div id="result"></div>
+<div class="nav"><button id="prev" onclick="move(-1)">← 前へ</button><button id="next" onclick="move(1)">次へ →</button></div>
+</div></main>
+<script>
+const DATA_URL="data/questions.csv";
+let qs=[],i=0,done={},score=0;
+function csv(s){let a=[],r=[],c="",q=false;for(let i=0;i<s.length;i++){let x=s[i];if(x=='"'){if(q&&s[i+1]=='"'){c+='"';i++}else q=!q}else if(x==','&&!q){r.push(c);c=""}else if((x=='\n'||x=='\r')&&!q){if(x=='\r'&&s[i+1]=='\n')i++;r.push(c);a.push(r);r=[];c=""}else c+=x}if(c||r.length){r.push(c);a.push(r)}let h=a.shift().map(x=>x.trim());return a.map(r=>Object.fromEntries(h.map((x,j)=>[x,(r[j]||"").trim()])))}
+async function load(){try{let r=await fetch(DATA_URL+"?v="+Date.now());if(!r.ok)throw Error("HTTP "+r.status);qs=csv(await r.text()).filter(x=>x.title||x.image);if(!qs.length)throw Error("問題データがありません");render()}catch(e){document.getElementById("error").innerHTML="<p>問題データを読み込めませんでした："+e.message+"</p>"}}
+function render(){let q=qs[i],d=done[i];document.getElementById("counter").textContent=`第 ${i+1} 問 / ${qs.length} 問`;document.getElementById("score").textContent=`正解 ${score} / ${Object.keys(done).length}`;document.getElementById("question").textContent=q.title||"";let im=document.getElementById("image");if(q.image){im.innerHTML=`<img src="${esc(q.image)}">`;im.querySelector("img").onerror=()=>im.innerHTML='<span class="placeholder">画像を表示できません</span>'}else im.innerHTML='<span class="placeholder">問題画像なし</span>';document.querySelectorAll(".answers button").forEach(b=>{b.disabled=!!d;b.className=""});let res=document.getElementById("result");if(d){let cb=/^(○|◯|true|1|正しい|yes)$/i.test(q.answer);document.getElementById(d.user?"yes":"no").classList.add(d.user==cb?"correct":"wrong");document.getElementById(cb?"yes":"no").classList.add("correct");res.style.display="block";res.innerHTML="<b>"+(d.user==cb?"正解！":"不正解")+"</b><br>"+esc(q.explanation||"")}else res.style.display="none";document.getElementById("prev").disabled=i===0;document.getElementById("next").disabled=i===qs.length-1}
+function answer(u){if(done[i])return;let c=/^(○|◯|true|1|正しい|yes)$/i.test(qs[i].answer);done[i]={user:u};if(u==c)score++;render()}
+function move(n){let x=i+n;if(x>=0&&x<qs.length){i=x;render()}}
+function esc(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
+load();
+</script></body></html>
