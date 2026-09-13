@@ -16,17 +16,28 @@
     input, textarea, select { width: 100%; padding: 8px; margin: 5px 0 15px; box-sizing: border-box; }
     .nav { margin-bottom: 15px; border-bottom: 2px solid #ccc; padding-bottom: 10px; }
     .nav button { background: #6c757d; }
+    .mode-btn { width: 100%; margin: 8px 0; padding: 12px; font-size: 16px; text-align: left; }
   </style>
 </head>
 <body>
 
   <div class="nav">
-    <button onclick="showScreen('quiz-screen')">クイズを解く</button>
+    <button onclick="showScreen('mode-screen')">モード選択</button>
     <button onclick="showScreen('admin-screen')">問題を編集する</button>
   </div>
 
+  <!-- モード選択画面 -->
+  <div id="mode-screen" class="card">
+    <h2>演習モードを選択</h2>
+    <button class="mode-btn" style="background:#28a745;" onclick="startQuiz('all', true)">🎲 ランダム全問演習</button>
+    <button class="mode-btn" style="background:#17a2b8;" onclick="startQuiz('all', false)">順次全問演習</button>
+    <hr style="margin: 15px 0;">
+    <h3>部位別演習</h3>
+    <div id="category-buttons"></div>
+  </div>
+
   <!-- クイズ画面 -->
-  <div id="quiz-screen" class="card">
+  <div id="quiz-screen" class="card hidden">
     <h2 id="q-title">問題</h2>
     <div id="q-image-container"></div>
     <p id="q-text" style="font-size: 18px; font-weight: bold;"></p>
@@ -49,14 +60,21 @@
     
     <h3>新規問題追加</h3>
     <form id="add-form" onsubmit="saveQuestion(event)">
+      <label>部位</label>
+      <select id="input-category">
+        <option value="上肢">上肢</option>
+        <option value="下肢">下肢</option>
+        <option value="体幹">体幹</option>
+      </select>
+
       <label>関節・運動名（例：肩関節 屈曲）</label>
       <input type="text" id="input-joint" required>
 
-      <label>問題文（基本軸や移動軸の設定を記述）</label>
+      <label>問題文</label>
       <textarea id="input-text" rows="2" placeholder="基本軸は肩甲骨外側縁である。" required></textarea>
 
-      <label>画像URL（空欄可 / 無料画像などのURLまたはbase64）</label>
-      <input type="text" id="input-img" placeholder="https://example.com/image.jpg">
+      <label>画像ファイル名（例: shoulder.png / 空欄可）</label>
+      <input type="text" id="input-img" placeholder="shoulder.png">
 
       <label>正解</label>
       <select id="input-answer">
@@ -72,49 +90,66 @@
 
     <hr style="margin: 20px 0;">
     
-    <h3>登録済み問題（データ管理）</h3>
-    <button onclick="exportData()" style="background: #17a2b8;">JSONとして出力（バックアップ）</button>
+    <h3>登録済み問題</h3>
+    <button onclick="exportData()" style="background: #17a2b8;">JSONとして出力</button>
     <button onclick="resetData()" style="background: #dc3545;">初期データに戻す</button>
     <ul id="question-list" style="margin-top: 15px; padding-left: 20px;"></ul>
   </div>
 
   <script>
-    // 初期サンプル問題
     const defaultQuestions = [
-      {
-        joint: "肩関節 屈曲",
-        text: "基本軸は「肩甲骨腋窩縁」、移動軸は「骨幹（上腕骨）」である。",
-        img: "",
-        answer: true,
-        exp: "正しいです。屈曲の基本軸は肩甲骨腋窩縁、移動軸は上腕骨です。"
-      },
-      {
-        joint: "股関節 外転",
-        text: "基本軸は「両側の前上腸骨棘を結ぶ線」、移動軸は「大腿骨幹（大腿骨頭と膝蓋骨中心を結ぶ線）」である。",
-        img: "",
-        answer: true,
-        exp: "正しいです。基本軸は両側のASISを結ぶ線です。"
-      }
+      { category: "上肢", joint: "肩関節 屈曲", text: "基本軸は「肩甲骨腋窩縁」、移動軸は「骨幹（上腕骨）」である。", img: "", answer: true, exp: "正しいです。" },
+      { category: "下肢", joint: "股関節 外転", text: "基本軸は「両側の前上腸骨棘を結ぶ線」、移動軸は「大腿骨幹」である。", img: "", answer: true, exp: "正しいです。" },
+      { category: "体幹", joint: "胸腰椎 屈曲", text: "基本軸は「仙骨面」、移動軸は「第7頸椎棘突起と第1仙椎棘突起を結ぶ線」である。", img: "", answer: true, exp: "正しいです。" }
     ];
 
     let questions = JSON.parse(localStorage.getItem('rom_quiz_questions')) || defaultQuestions;
+    let activePlaylist = [];
     let currentIndex = 0;
 
     function showScreen(screenId) {
+      document.getElementById('mode-screen').classList.add('hidden');
       document.getElementById('quiz-screen').classList.add('hidden');
       document.getElementById('admin-screen').classList.add('hidden');
       document.getElementById(screenId).classList.remove('hidden');
+      
+      if (screenId === 'mode-screen') renderCategoryButtons();
       if (screenId === 'admin-screen') renderAdminList();
     }
 
-    function loadQuestion() {
-      if (questions.length === 0) {
-        document.getElementById('q-title').innerText = "問題がありません";
-        document.getElementById('q-text').innerText = "管理画面から問題を追加してください。";
+    function renderCategoryButtons() {
+      const container = document.getElementById('category-buttons');
+      const categories = [...new Set(questions.map(q => q.category || "その他"))];
+      
+      container.innerHTML = categories.map(cat => 
+        `<button class="mode-btn" style="background:#6f42c1;" onclick="startQuiz('${cat}', false)">${cat} 演習</button>`
+      ).join('');
+    }
+
+    function startQuiz(category, isRandom) {
+      if (category === 'all') {
+        activePlaylist = [...questions];
+      } else {
+        activePlaylist = questions.filter(q => (q.category || "その他") === category);
+      }
+
+      if (activePlaylist.length === 0) {
+        alert("該当する問題がありません。");
         return;
       }
-      const q = questions[currentIndex];
-      document.getElementById('q-title').innerText = `【${q.joint}】（${currentIndex + 1}/${questions.length}）`;
+
+      if (isRandom) {
+        activePlaylist.sort(() => Math.random() - 0.5);
+      }
+
+      currentIndex = 0;
+      showScreen('quiz-screen');
+      loadQuestion();
+    }
+
+    function loadQuestion() {
+      const q = activePlaylist[currentIndex];
+      document.getElementById('q-title').innerText = `【${q.joint}】（${currentIndex + 1}/${activePlaylist.length}）`;
       document.getElementById('q-text').innerText = q.text;
       
       const imgContainer = document.getElementById('q-image-container');
@@ -125,7 +160,7 @@
     }
 
     function checkAnswer(userAnswer) {
-      const q = questions[currentIndex];
+      const q = activePlaylist[currentIndex];
       const isCorrect = userAnswer === q.answer;
       
       document.getElementById('result-text').innerText = isCorrect ? "正解！ ⭕" : "不正解... ❌";
@@ -137,13 +172,19 @@
     }
 
     function nextQuestion() {
-      currentIndex = (currentIndex + 1) % questions.length;
-      loadQuestion();
+      currentIndex++;
+      if (currentIndex < activePlaylist.length) {
+        loadQuestion();
+      } else {
+        alert("全問題が終了しました！モード選択に戻ります。");
+        showScreen('mode-screen');
+      }
     }
 
     function saveQuestion(e) {
       e.preventDefault();
       const newQ = {
+        category: document.getElementById('input-category').value,
         joint: document.getElementById('input-joint').value,
         text: document.getElementById('input-text').value,
         img: document.getElementById('input-img').value,
@@ -162,7 +203,6 @@
         questions.splice(index, 1);
         localStorage.setItem('rom_quiz_questions', JSON.stringify(questions));
         renderAdminList();
-        loadQuestion();
       }
     }
 
@@ -172,7 +212,7 @@
       questions.forEach((q, i) => {
         const li = document.createElement('li');
         li.style.marginBottom = "8px";
-        li.innerHTML = `<strong>${q.joint}</strong>: ${q.text} 
+        li.innerHTML = `[${q.category || "未設定"}] <strong>${q.joint}</strong>: ${q.text} 
           <button onclick="deleteQuestion(${i})" style="background:#dc3545; padding:2px 8px; font-size:12px;">削除</button>`;
         list.appendChild(li);
       });
@@ -187,16 +227,16 @@
     }
 
     function resetData() {
-      if (confirm("初期問題に戻しますか？追加した問題は消去されます。")) {
+      if (confirm("初期問題に戻しますか？")) {
         localStorage.removeItem('rom_quiz_questions');
         questions = [...defaultQuestions];
         renderAdminList();
-        loadQuestion();
+        showScreen('mode-screen');
       }
     }
 
-    // 初回読み込み
-    loadQuestion();
+    // 初回起動
+    showScreen('mode-screen');
   </script>
 </body>
 </html>
